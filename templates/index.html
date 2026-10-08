@@ -86,6 +86,21 @@
             cursor: pointer;
         }
 
+        .ask-button:disabled {
+            opacity: 0.6;
+            cursor: wait;
+        }
+
+        .answer-box {
+            display: none;
+            background: #eef4ff;
+            border-radius: 18px;
+            padding: 18px;
+            margin-top: 16px;
+            white-space: pre-wrap;
+            line-height: 1.6;
+        }
+
         .section-title {
             margin: 25px 0 12px;
             font-size: 20px;
@@ -199,9 +214,11 @@
             placeholder="Écris ta question ici... Même si tu fais des fautes, je ferai de mon mieux pour comprendre."
         ></textarea>
 
-        <button class="ask-button">
+        <button class="ask-button" onclick="askAssistant()">
             🤖 Demander à l'assistant
         </button>
+
+        <div class="answer-box" id="answerBox"></div>
 
     </section>
 
@@ -296,6 +313,61 @@
     </footer>
 
 </div>
+
+<script>
+async function askAssistant() {
+
+    const input = document.querySelector(".question-input");
+    const button = document.querySelector(".ask-button");
+    const answerBox = document.querySelector("#answerBox");
+
+    const question = input.value.trim();
+
+    if (!question) {
+        answerBox.style.display = "block";
+        answerBox.textContent = "✍🏾 Écris d'abord une question.";
+        return;
+    }
+
+    button.disabled = true;
+    button.textContent = "🤖 L'assistant réfléchit...";
+    
+    answerBox.style.display = "block";
+    answerBox.textContent = "⏳ Je prépare ta réponse...";
+
+    try {
+
+        const response = await fetch("/ask", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                question: question
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "Une erreur est survenue.");
+        }
+
+        answerBox.textContent = data.answer;
+
+    } catch (error) {
+
+        answerBox.textContent =
+            "❌ Impossible d'obtenir une réponse pour le moment.\n\n" +
+            error.message;
+
+    } finally {
+
+        button.disabled = false;
+        button.textContent = "🤖 Demander à l'assistant";
+    }
+}
+</script>
 
 </body>
 </html>
