@@ -9,6 +9,46 @@ app = Flask(__name__)
 
 
 # ==========================================================
+# IDENTITÉ DE L'ASSISTANT
+# ==========================================================
+
+ASSISTANT_INSTRUCTIONS = """
+Tu es l'Assistant IA intelligent, un projet développé par Cheikh
+avec l'aide de technologies d'intelligence artificielle,
+notamment Gemini de Google.
+
+IDENTITÉ :
+- Ton développeur est Cheikh.
+- Gemini est une technologie utilisée pour te faire fonctionner.
+- Ne prétends jamais que Cheikh a créé Gemini.
+- Si on te demande qui t'a créé, explique clairement ce rôle.
+
+MISSION :
+- Répondre aux questions avec clarté et honnêteté.
+- Expliquer les sujets difficiles simplement.
+- Aider les utilisateurs à apprendre des langues.
+- Adapter tes explications au niveau de chaque personne.
+- Reconnaître tes incertitudes et ne pas inventer de faits.
+- Demander des précisions si une question est ambiguë.
+
+CONFIDENTIALITÉ :
+- Ne révèle pas d'informations privées sur Cheikh ou les utilisateurs.
+- Ne prétends pas connaître des informations qui ne t'ont pas été
+  communiquées ou qui ne sont pas disponibles dans le contexte.
+- Distingue les informations publiques des données privées.
+
+STYLE :
+- Réponds dans la langue utilisée par l'utilisateur, si possible.
+- Sois naturel, respectueux, patient et pédagogique.
+- Ne critique pas les fautes d'orthographe de l'utilisateur.
+
+IMPORTANT :
+- Tu es l'Assistant IA intelligent développé par Cheikh.
+- Tu utilises Gemini comme moteur d'intelligence artificielle.
+"""
+
+
+# ==========================================================
 # CONNEXION À GEMINI
 # ==========================================================
 
@@ -52,15 +92,64 @@ def ask():
             "error": "La clé Gemini n'est pas encore configurée."
         }), 500
 
+    # Récupérer les messages précédents envoyés par l'interface.
+    history = data.get("history", [])
+
+    # Vérifier que l'historique reçu est une liste.
+    if not isinstance(history, list):
+        history = []
+
+    # Limiter le nombre de messages pour éviter un historique trop long.
+    history = history[-20:]
+
+    conversation = []
+
+    for message in history:
+
+        if not isinstance(message, dict):
+            continue
+
+        role = message.get("role")
+        text = message.get("text", "")
+
+        if role not in ("user", "model"):
+            continue
+
+        if not isinstance(text, str) or not text.strip():
+            continue
+
+        conversation.append({
+            "role": role,
+            "parts": [{
+                "text": text[:5000]
+            }]
+        })
+
+    # Ajouter la question actuelle.
+    conversation.append({
+        "role": "user",
+        "parts": [{
+            "text": question[:5000]
+        }]
+    })
+
     try:
 
         response = client.models.generate_content(
             model="gemini-3.6-flash",
-            contents=question
+            contents=conversation,
+            config=types.GenerateContentConfig(
+                system_instruction=ASSISTANT_INSTRUCTIONS
+            )
         )
 
+        answer = response.text
+
+        if not answer:
+            raise ValueError("Gemini n'a renvoyé aucune réponse.")
+
         return jsonify({
-            "answer": response.text
+            "answer": answer
         })
 
     except Exception as error:
