@@ -57,8 +57,8 @@ api_key = os.environ.get("GEMINI_API_KEY")
 client = genai.Client(
     api_key=api_key,
     http_options=types.HttpOptions(
-        timeout=30000
-    )
+    timeout=60000
+)
 ) if api_key else None
 
 
