@@ -315,6 +315,17 @@
 </div>
 
 <script>
+// ==========================================================
+// MÉMOIRE DE LA CONVERSATION EN COURS
+// ==========================================================
+
+let conversationHistory = [];
+
+
+// ==========================================================
+// ENVOYER UNE QUESTION À L'ASSISTANT
+// ==========================================================
+
 async function askAssistant() {
 
     const input = document.querySelector(".question-input");
@@ -331,7 +342,7 @@ async function askAssistant() {
 
     button.disabled = true;
     button.textContent = "🤖 L'assistant réfléchit...";
-    
+
     answerBox.style.display = "block";
     answerBox.textContent = "⏳ Je prépare ta réponse...";
 
@@ -339,21 +350,46 @@ async function askAssistant() {
 
         const response = await fetch("/ask", {
             method: "POST",
+
             headers: {
                 "Content-Type": "application/json"
             },
+
             body: JSON.stringify({
-                question: question
+                question: question,
+                history: conversationHistory
             })
         });
 
         const data = await response.json();
 
         if (!response.ok) {
-            throw new Error(data.error || "Une erreur est survenue.");
+            throw new Error(
+                data.error || "Une erreur est survenue."
+            );
         }
 
+        // Afficher la réponse.
         answerBox.textContent = data.answer;
+
+        // Mémoriser la question.
+        conversationHistory.push({
+            role: "user",
+            text: question
+        });
+
+        // Mémoriser la réponse.
+        conversationHistory.push({
+            role: "model",
+            text: data.answer
+        });
+
+        // Garder les 20 derniers messages.
+        conversationHistory =
+            conversationHistory.slice(-20);
+
+        // Vider le champ de saisie.
+        input.value = "";
 
     } catch (error) {
 
@@ -368,6 +404,7 @@ async function askAssistant() {
     }
 }
 </script>
+
 
 </body>
 </html>
